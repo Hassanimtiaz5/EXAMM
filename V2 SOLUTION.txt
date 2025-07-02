@@ -1,0 +1,234 @@
+url=https://opensource-demo.orangehrmlive.com/web/index.php/auth/login
+username=Admin
+password=admin123
+🔧 2. ConfigReader.java (in config/)
+java
+Copy
+Edit
+package config;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+
+public class ConfigReader {
+    private static Properties properties;
+
+    static {
+        try {
+            FileInputStream fileInputStream = new FileInputStream("src/main/resources/config.properties");
+            properties = new Properties();
+            properties.load(fileInputStream);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to load configuration file.");
+        }
+    }
+
+    public static String getProperty(String key) {
+        return properties.getProperty(key);
+    }
+}
+🔧 3. LoginPage.java (in pages/)
+java
+Copy
+Edit
+package pages;
+
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.PageFactory;
+
+public class LoginPage {
+    WebDriver driver;
+
+    @FindBy(name = "username")
+    WebElement usernameField;
+
+    @FindBy(name = "password")
+    WebElement passwordField;
+
+    @FindBy(css = "button[type='submit']")
+    WebElement loginButton;
+
+    public LoginPage(WebDriver driver){
+        this.driver = driver;
+        PageFactory.initElements(driver, this);
+    }
+
+    public boolean isLoginPageDisplayed(){
+        return usernameField.isDisplayed();
+    }
+
+    public void login(String username, String password){
+        usernameField.sendKeys(username);
+        passwordField.sendKeys(password);
+        loginButton.click();
+    }
+}
+🔧 4. DashboardPage.java (in pages/)
+java
+Copy
+Edit
+package pages;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.PageFactory;
+
+public class DashboardPage {
+    WebDriver driver;
+
+    public DashboardPage(WebDriver driver){
+        this.driver = driver;
+        PageFactory.initElements(driver, this);
+    }
+
+    public void logout(){
+        driver.findElement(By.className("oxd-userdropdown-name")).click();
+        driver.findElement(By.xpath("//a[text()='Logout']")).click();
+    }
+
+    public boolean isBackToLoginPage(){
+        return driver.getCurrentUrl().contains("auth/login");
+    }
+}
+✅ 5. Test_LoginAutomation.java (in tests/)
+java
+Copy
+Edit
+package tests;
+
+import config.ConfigReader;
+import org.openqa.selenium.Cookie;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.testng.annotations.*;
+import pages.LoginPage;
+import pages.DashboardPage;
+
+import java.util.Set;
+
+public class Test_LoginAutomation {
+
+    WebDriver driver;
+    LoginPage loginPage;
+    DashboardPage dashboardPage;
+
+    @BeforeClass
+    public void setup() {
+        // Step 1: Launch the Chrome Browser and Maximize the window
+        driver = new ChromeDriver();
+        driver.manage().window().maximize();
+
+        // Step 2: Navigate to the URL and Print Reg. #
+        driver.get(ConfigReader.getProperty("url"));
+        System.out.println("URL launched successfully - L1F21BSSE0001");
+    }
+
+    @Test(priority = 1)
+    public void loginTest() {
+        loginPage = new LoginPage(driver);
+
+        // Step 3: Verify that the Login Page is loaded successfully
+        assert loginPage.isLoginPageDisplayed();
+        System.out.println("Login Page loaded successfully");
+
+        // Step 4: Login to the application and then minimize the window
+        loginPage.login(ConfigReader.getProperty("username"), ConfigReader.getProperty("password"));
+        driver.manage().window().minimize();
+
+        // Step 5: Retrieve all cookies after login
+        Set<Cookie> allCookies = driver.manage().getCookies();
+
+        // Step 6: Print cookies details including Name, Value, and Domain
+        for (Cookie cookie : allCookies) {
+            System.out.println("Cookie Name: " + cookie.getName());
+            System.out.println("Cookie Value: " + cookie.getValue());
+            System.out.println("Cookie Domain: " + cookie.getDomain());
+            System.out.println("--------");
+        }
+
+        // Step 7: Get and then print a specific cookie's Name and Value
+        Cookie selectedCookie = driver.manage().getCookieNamed("orangehrm");
+        if (selectedCookie != null) {
+            System.out.println("Selected Cookie: " + selectedCookie.getName());
+            System.out.println("Selected Value: " + selectedCookie.getValue());
+            System.out.println("Reason: Session tracking for HRM system - Hassan Malik");
+        }
+    }
+
+    @Test(priority = 2)
+    public void logoutTest() {
+        driver.manage().window().maximize();  // Step 8: Maximize window
+
+        dashboardPage = new DashboardPage(driver);
+        dashboardPage.logout();               // Perform logout
+
+        // Step 9: Verify redirected to login page and close browser
+        assert dashboardPage.isBackToLoginPage();
+        System.out.println("Successfully returned to login page after logout.");
+    }
+
+    @AfterClass
+    public void tearDown() {
+        // Step 10: Print Section & Full Name
+        System.out.println("Section: S5 | Full Name: Hassan Malik");
+        driver.quit();
+    }
+}
+📄 6. pom.xml — Dependencies
+xml
+Copy
+Edit
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.labfinal</groupId>
+  <artifactId>L1F21BSSE0001</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <dependencies>
+    <!-- selenium-java -->
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>4.31.0</version>
+    </dependency>
+
+    <!-- testng -->
+    <dependency>
+      <groupId>org.testng</groupId>
+      <artifactId>testng</artifactId>
+      <version>7.10.2</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- rest-assured -->
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>5.5.5</version>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- JSON -->
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20250107</version>
+    </dependency>
+  </dependencies>
+</project>
+🧪 7. testng.xml (Project Root)
+xml
+Copy
+Edit
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd" >
+<suite name="AST Lab Final S5">
+    <test name="OrangeHRM Login Test">
+        <classes>
+            <class name="tests.Test_LoginAutomation"/>
+        </classes>
+    </test>
+</suite>
